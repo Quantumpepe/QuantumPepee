@@ -21,7 +21,7 @@
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
-            margin-top: 20px;
+            margin-top: 10px;
             border-radius: 10px;
         }
         button:hover {
@@ -41,7 +41,8 @@
 <body>
     <div class="container">
         <h2>QuantumPepe Staking</h2>
-        <button id="connectButton">Mit Wallet verbinden</button>
+        <button id="connectMetaMask">Mit MetaMask verbinden</button>
+        <button id="connectWalletConnect">Mit WalletConnect verbinden</button>
         <p><strong>Wallet:</strong> <span id="walletAddress">Nicht verbunden</span></p>
         <p><strong>Chain:</strong> <span id="chainId">-</span></p>
         <p><strong>Staking Contract:</strong> <span id="stakingContract">-</span></p>
@@ -59,7 +60,7 @@
     let account;
     let chainId;
 
-    async function connectWallet() {
+    async function connectMetaMask() {
         if (window.ethereum) {
             web3 = new Web3(window.ethereum);
             await window.ethereum.request({ method: "eth_requestAccounts" });
@@ -69,6 +70,26 @@
             fetchStakingData();
         } else {
             alert("MetaMask nicht gefunden!");
+        }
+    }
+
+    async function connectWalletConnect() {
+        try {
+            const provider = new WalletConnectProvider({
+                rpc: {
+                    1: "https://mainnet.infura.io/v3/YOUR_INFURA_KEY",
+                    56: "https://bsc-dataseed.binance.org/",
+                    137: "https://polygon-rpc.com/"
+                }
+            });
+            await provider.enable();
+            web3 = new Web3(provider);
+            account = (await web3.eth.getAccounts())[0];
+            chainId = await web3.eth.getChainId();
+            updateUI();
+            fetchStakingData();
+        } catch (error) {
+            console.error("WalletConnect Fehler", error);
         }
     }
 
@@ -96,9 +117,11 @@
         document.getElementById("stakingContract").innerText = stakingContracts[chainId] || "Nicht unterstützt";
     }
 
-    document.getElementById("connectButton").addEventListener("click", connectWallet);
+    document.getElementById("connectMetaMask").addEventListener("click", connectMetaMask);
+    document.getElementById("connectWalletConnect").addEventListener("click", connectWalletConnect);
 </script>
 
 </body>
 </html>
+        
         
