@@ -81,14 +81,14 @@
             }
         }
 
-        async function connectWalletConnect() {
+       async function connectWalletConnect() {
     try {
         const providerOptions = {
             walletconnect: {
-                package: window.WalletConnectProvider.default,  // WICHTIG: "window." hinzufügen
+                package: window.WalletConnectProvider.default,
                 options: {
-                    projectId: "67c4292e272ac36fdbc049335adf6b67",  // Deine WalletConnect Project ID
-                    rpc: {
+                    projectId: "67c4292e272ac36fdbc049335adf6b67",  // Deine WalletConnect V2 Project ID
+                    rpcMap: {
                         1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Ethereum Infura
                         137: "https://polygon-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Polygon Infura
                         56: "https://bsc-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83"  // Binance Smart Chain Infura
@@ -116,6 +116,7 @@
         alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
     }
 }
+
 
 
 
