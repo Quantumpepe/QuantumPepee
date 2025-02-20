@@ -118,33 +118,83 @@
       }
     }
 
-   if (ethereumProvider && ethereumProvider.connector) {
-  if (ethereumProvider.connector.connected) {
-    console.log("Bereits verbunden, daher kein neuer Connect-Versuch.");
-    return;
-  } else {
-    try {
-      await ethereumProvider.connector.killSession();
-      console.log("Hängende Session wurde beendet.");
-    } catch (e) {
-      console.error("Fehler beim Beenden der hängenden Session:", e);
-    }
-  }
-}
+   
 
     // ----------------------------------------------------------------
     // 3) WalletConnect V2 verbinden (QR-Code -> Mobile Wallet)
     // ----------------------------------------------------------------
     async function connectWalletConnect() {
-      // Falls bereits ein Provider existiert, aber noch nicht verbunden (möglicherweise hängende Anfrage), löschen wir diese Session
-      if (ethereumProvider && ethereumProvider.connector && !ethereumProvider.connector.connected) {
-        try {
-          await ethereumProvider.disconnect();
-          console.log("Vorherige hängende WalletConnect-Session wurde getrennt.");
-        } catch (e) {
-          console.log("Fehler beim Trennen der hängenden Session:", e);
-        }
+  // Versuche, eine eventuell hängende Session zu beenden:
+  if (ethereumProvider && ethereumProvider.connector) {
+    if (ethereumProvider.connector.connected) {
+      console.log("Bereits verbunden. Keine erneute Anfrage nötig.");
+      return;
+    } else {
+      try {
+        await ethereumProvider.connector.killSession();
+        console.log("Hängende Session wurde beendet.");
+      } catch (e) {
+        console.error("Fehler beim Beenden der hängenden Session:", e);
       }
+    }
+  }
+  
+  if (wcConnectInProgress) {
+    console.log("Connect request already pending.");
+    return;
+  }
+  
+  wcConnectInProgress = true;
+  console.log("Starte WalletConnect-Verbindungsversuch...");
+  
+  try {
+    // Provider initialisieren
+    ethereumProvider = await window.WalletConnectEthereumProvider.EthereumProvider.init({
+      projectId,
+      chains,
+      rpcMap,
+      methods: [
+        "eth_sendTransaction",
+        "eth_signTransaction",
+        "eth_sign",
+        "personal_sign",
+        "eth_signTypedData"
+      ],
+      events: ["chainChanged", "accountsChanged"],
+      showQrModal: false
+    });
+
+    const wcModal = new window.WalletConnectModal.WalletConnectModal({
+      projectId,
+      themeMode: 'dark'
+    });
+
+    const uri = await ethereumProvider.connector.getUri();
+    console.log("URI erhalten:", uri);
+    wcModal.openModal({ uri });
+    await ethereumProvider.connect();
+    wcModal.closeModal();
+
+    web3 = new Web3(ethereumProvider);
+    const accounts = await web3.eth.getAccounts();
+    account = accounts[0];
+    chainId = await web3.eth.getChainId();
+
+    updateUI();
+    fetchStakingData();
+
+    ethereumProvider.on("chainChanged", handleChainChanged);
+    ethereumProvider.on("accountsChanged", handleAccountsChanged);
+
+  } catch (error) {
+    console.error("WalletConnect Fehler:", error);
+    alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
+  } finally {
+    wcConnectInProgress = false;
+    console.log("Verbindungsversuch beendet.");
+  }
+}
+
       
       // Falls bereits verbunden, nichts tun
       if (ethereumProvider && ethereumProvider.connector && ethereumProvider.connector.connected) {
