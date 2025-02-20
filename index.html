@@ -35,6 +35,11 @@
     button:hover {
       background-color: #00cc00;
     }
+    /* Speziell für den Disconnect-Button – soll rot sein */
+    #disconnectButton {
+      background-color: red;
+      color: white;
+    }
     .container {
       max-width: 500px;
       margin: auto;
@@ -69,7 +74,7 @@
     // 1) Konfiguration: projectId, Infura & RPC
     // ----------------------------------------------------------------
     const projectId = "67c4292e272ac36fdbc049335adf6b67"; // Dein WalletConnect V2 projectId
-    const infuraId  = "e501cafbd38147b5aa9e6bc20b35ec83"; // Deine Infura-ID (falls benötigt)
+    const infuraId  = "e501cafbd38147b5aa9e6bc20b35ec83"; // Deine Infura-ID
 
     // Unterstützte Chain-IDs (z.B. Ethereum=1, BSC=56, Polygon=137)
     const chains = [1, 56, 137];
@@ -117,7 +122,17 @@
     // 3) WalletConnect V2 verbinden (QR-Code -> Mobile Wallet)
     // ----------------------------------------------------------------
     async function connectWalletConnect() {
-      // Prüfen, ob bereits verbunden:
+      // Falls bereits ein Provider existiert, aber noch nicht verbunden (möglicherweise hängende Anfrage), löschen wir diese Session
+      if (ethereumProvider && ethereumProvider.connector && !ethereumProvider.connector.connected) {
+        try {
+          await ethereumProvider.disconnect();
+          console.log("Vorherige hängende WalletConnect-Session wurde getrennt.");
+        } catch (e) {
+          console.log("Fehler beim Trennen der hängenden Session:", e);
+        }
+      }
+      
+      // Falls bereits verbunden, nichts tun
       if (ethereumProvider && ethereumProvider.connector && ethereumProvider.connector.connected) {
         console.log("Bereits verbunden. Keine erneute Anfrage nötig.");
         return;
@@ -178,7 +193,7 @@
     // 4) Disconnect-Funktion für WalletConnect und MetaMask
     // ----------------------------------------------------------------
     async function disconnect() {
-      // Falls WalletConnect verbunden ist, versuchen wir zu disconnecten:
+      // Falls WalletConnect verbunden ist, trennen
       if (ethereumProvider && typeof ethereumProvider.disconnect === 'function') {
         try {
           await ethereumProvider.disconnect();
@@ -187,7 +202,7 @@
           console.error("Fehler beim Disconnect:", err);
         }
       }
-      // Da MetaMask keine Disconnect-Methode bietet, setzen wir einfach den Zustand zurück
+      // Bei MetaMask gibt es keine offizielle Disconnect-Methode:
       web3 = null;
       account = null;
       chainId = null;
@@ -266,7 +281,7 @@
       document.getElementById("chainId").innerText = chainId || "-";
       document.getElementById("stakingContract").innerText = stakingContracts[chainId] || "Nicht unterstützt";
 
-      // Zeige oder verstecke den Disconnect-Button
+      // Disconnect-Button nur anzeigen, wenn eine Verbindung besteht
       const disconnectBtn = document.getElementById("disconnectButton");
       if (account) {
         disconnectBtn.style.display = "inline-block";
@@ -284,7 +299,3 @@
   </script>
 </body>
 </html>
-
-
-
-
