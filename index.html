@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QuantumPepe Staking</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@2.2.6/dist/browser/umd/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/web3modal@2.3.0/dist/index.umd.min.js"></script>
 
- <style>
+    <!-- Web3 & WalletConnect V2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3modal@2.3.0/dist/index.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@2.2.6/dist/umd/index.min.js"></script>
+
+    <style>
         body {
             background-color: #004d00;
             color: #00ff00;
@@ -55,7 +57,7 @@
         <p><strong>Gesamtes Staking:</strong> <span id="totalStaked">0</span></p>
         <p><strong>Rewards:</strong> <span id="rewards">0</span></p>
     </div>
-    
+
     <script>
         const stakingContracts = {
             1: "ETHEREUM_CONTRACT_ADDRESS",
@@ -80,48 +82,44 @@
             }
         }
 
-       async function connectWalletConnect() {
-    try {
-        const providerOptions = {
-            walletconnect: {
-                package: WalletConnectProvider,  // Korrekte Referenz
-                options: {
-                    projectId: "67c4292e272ac36fdbc049335adf6b67",  // WalletConnect V2 Project ID
-                    rpc: {
-                        1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Ethereum Infura
-                        137: "https://polygon-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Polygon Infura
-                        56: "https://bsc-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83"  // Binance Smart Chain Infura
+        async function connectWalletConnect() {
+            try {
+                const providerOptions = {
+                    walletconnect: {
+                        package: WalletConnectProvider,  // Korrekte Referenz
+                        options: {
+                            projectId: "67c4292e272ac36fdbc049335adf6b67",  // WalletConnect V2 Project ID
+                            rpc: {
+                                1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Ethereum Infura
+                                137: "https://polygon-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Polygon Infura
+                                56: "https://bsc-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83"  // Binance Smart Chain Infura
+                            }
+                        }
                     }
-                }
+                };
+
+                const web3Modal = new Web3Modal({
+                    cacheProvider: false,
+                    providerOptions
+                });
+
+                const provider = await web3Modal.connect();
+                web3 = new Web3(provider);
+
+                const accounts = await web3.eth.getAccounts();
+                chainId = await web3.eth.getChainId();
+                account = accounts[0];
+
+                document.getElementById("walletAddress").innerText = account;
+                document.getElementById("chainId").innerText = chainId;
+                
+                fetchStakingData(); // Staking-Daten nach erfolgreichem Login abrufen
+
+            } catch (error) {
+                console.error("WalletConnect Fehler:", error);
+                alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
             }
-        };
-
-        const web3Modal = new Web3Modal({
-            cacheProvider: false,
-            providerOptions
-        });
-
-        const provider = await web3Modal.connect();
-        web3 = new Web3(provider);
-
-        const accounts = await web3.eth.getAccounts();
-        chainId = await web3.eth.getChainId();
-        account = accounts[0];
-
-        document.getElementById("walletAddress").innerText = account;
-        document.getElementById("chainId").innerText = chainId;
-        
-        fetchStakingData(); // Staking-Daten nach erfolgreichem Login abrufen
-
-    } catch (error) {
-        console.error("WalletConnect Fehler:", error);
-        alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
-    }
-}
-
-
-
-
+        }
 
         async function fetchStakingData() {
             if (!stakingContracts[chainId]) return;
@@ -152,3 +150,4 @@
     </script>
 </body>
 </html>
+
