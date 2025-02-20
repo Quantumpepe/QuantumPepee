@@ -7,8 +7,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@2.2.6/dist/browser/umd/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.5/dist/index.min.js"></script>
-
-    <style>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+ <style>
         body {
             background-color: #004d00;
             color: #00ff00;
@@ -83,19 +83,18 @@
         async function connectWalletConnect() {
     try {
         const providerOptions = {
-    walletconnect: {
-        package: WalletConnectProvider.default,
-        options: {
-            projectId: "67c4292e272ac36fdbc049335adf6b67",  // Deine WalletConnect Project ID
-            rpc: {
-                1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Ethereum Infura
-                137: "https://polygon-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Polygon Infura
-                56: "https://bsc-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83"  // Binance Smart Chain Infura
+            walletconnect: {
+                package: window.WalletConnectProvider.default,  // WICHTIG: "window." hinzufügen
+                options: {
+                    projectId: "67c4292e272ac36fdbc049335adf6b67",  // Deine WalletConnect Project ID
+                    rpc: {
+                        1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Ethereum Infura
+                        137: "https://polygon-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Polygon Infura
+                        56: "https://bsc-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83"  // Binance Smart Chain Infura
+                    }
+                }
             }
-        }
-    }
-};
-
+        };
 
         const web3Modal = new Web3Modal.default({
             cacheProvider: false,
@@ -116,6 +115,7 @@
         alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
     }
 }
+
 
 
         async function fetchStakingData() {
