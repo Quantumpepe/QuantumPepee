@@ -6,7 +6,7 @@
     <title>QuantumPepe Staking</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3modal/1.9.5/web3modal.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@2.0.0/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@2.2.6/dist/umd/index.min.js"></script>
     <style>
         body {
             background-color: #004d00;
@@ -81,14 +81,14 @@
 
         async function connectWalletConnect() {
             try {
-                const provider = new window.WalletConnectProvider({
-                    projectId: "YOUR_PROJECT_ID",
-                    rpcMap: {
+                const provider = new WalletConnectProvider({
+                    rpc: {
                         1: "https://mainnet.infura.io/v3/YOUR_INFURA_KEY",
                         56: "https://bsc-dataseed.binance.org/",
                         137: "https://polygon-rpc.com/"
                     },
-                    qrcodeModal: true
+                    projectId: "YOUR_PROJECT_ID",
+                    qrcode: true
                 });
                 await provider.enable();
                 web3 = new Web3(provider);
@@ -98,6 +98,7 @@
                 fetchStakingData();
             } catch (error) {
                 console.error("WalletConnect Fehler", error);
+                alert("Fehler beim Verbinden mit WalletConnect. Bitte überprüfe deine Wallet und versuche es erneut.");
             }
         }
 
@@ -130,5 +131,3 @@
     </script>
 </body>
 </html>
-
-
