@@ -78,14 +78,14 @@
     // Unterstützte Chain-IDs (Ethereum=1, BSC=56, Polygon=137)
     const chains = [1, 56, 137];
 
-    // RPC-URLs (Infura unterstützt kein BSC -> daher binance.org)
+    // RPC-URLs (Infura unterstützt kein BSC -> binance.org)
     const rpcMap = {
       1:   `https://mainnet.infura.io/v3/${infuraId}`,
       137: `https://polygon-mainnet.infura.io/v3/${infuraId}`,
       56:  "https://bsc-dataseed.binance.org"
     };
 
-    // Staking-Contracts (ersetze die Platzhalter durch echte Adressen)
+    // Staking-Contracts (Platzhalter durch echte Adressen ersetzen)
     const stakingContracts = {
       1:   "ETHEREUM_CONTRACT_ADDRESS",
       56:  "BSC_CONTRACT_ADDRESS",
@@ -122,27 +122,32 @@
     // 3) WalletConnect V2 verbinden (QR-Code -> Mobile Wallet)
     // -----------------------------------------------------------
     async function connectWalletConnect() {
-      // Versuche, eine eventuell hängende Session zu beenden:
-      if (ethereumProvider && ethereumProvider.connector) {
-        if (ethereumProvider.connector.connected) {
-          console.log("Bereits verbunden. Keine erneute Anfrage nötig.");
-          return;
-        } else {
-          try {
-            console.log("Versuche, hängende Session zu killen...");
-            await ethereumProvider.connector.killSession();
-            console.log("Hängende Session wurde beendet.");
-          } catch (e) {
-            console.error("Fehler beim Killen der hängenden Session:", e);
-          }
-        }
-      }
-      
+      console.log("connectWalletConnect() aufgerufen...");
+
+      // 1) Prüfe: Läuft schon ein Verbindungsversuch?
       if (wcConnectInProgress) {
-        console.log("Connect request already pending.");
+        console.log("Connect request already pending. -> Abbruch");
         return;
       }
-      
+
+      // 2) Prüfe: Ist schon verbunden?
+      if (ethereumProvider && ethereumProvider.connector && ethereumProvider.connector.connected) {
+        console.log("Bereits verbunden. Keine erneute Anfrage nötig. -> Abbruch");
+        return;
+      }
+
+      // 3) Falls Provider existiert, aber NICHT verbunden -> killSession
+      if (ethereumProvider && ethereumProvider.connector && !ethereumProvider.connector.connected) {
+        console.log("Versuche, hängende Session zu killen...");
+        try {
+          await ethereumProvider.connector.killSession();
+          console.log("Hängende Session beendet.");
+        } catch (e) {
+          console.error("Fehler beim Killen der hängenden Session:", e);
+        }
+      }
+
+      // Jetzt wirklich den Connect starten
       wcConnectInProgress = true;
       console.log("Starte WalletConnect-Verbindungsversuch...");
 
@@ -163,6 +168,7 @@
           showQrModal: false
         });
 
+        // Modal erstellen und öffnen
         const wcModal = new window.WalletConnectModal.WalletConnectModal({
           projectId,
           themeMode: 'dark'
@@ -170,18 +176,24 @@
 
         const uri = await ethereumProvider.connector.getUri();
         console.log("URI erhalten:", uri);
+
         wcModal.openModal({ uri });
-        await ethereumProvider.connect();
+        await ethereumProvider.connect(); // User scannt QR und bestätigt
         wcModal.closeModal();
 
+        // Web3.js anlegen
         web3 = new Web3(ethereumProvider);
+
+        // Accounts & Chain
         const accounts = await web3.eth.getAccounts();
         account = accounts[0];
         chainId = await web3.eth.getChainId();
 
+        // UI & Daten
         updateUI();
         fetchStakingData();
 
+        // Events
         ethereumProvider.on("chainChanged", handleChainChanged);
         ethereumProvider.on("accountsChanged", handleAccountsChanged);
       } catch (error) {
@@ -197,6 +209,7 @@
     // 4) Disconnect-Funktion für WalletConnect & MetaMask
     // -----------------------------------------------------------
     async function disconnect() {
+      console.log("disconnect() aufgerufen...");
       if (ethereumProvider && typeof ethereumProvider.disconnect === 'function') {
         try {
           await ethereumProvider.disconnect();
@@ -205,7 +218,7 @@
           console.error("Fehler beim Disconnect:", err);
         }
       }
-      // Bei MetaMask gibt es keine offizielle Disconnect-Methode – daher resetten wir den internen Zustand.
+      // MetaMask: Kein offizielles Disconnect -> interne Variablen resetten
       web3 = null;
       account = null;
       chainId = null;
@@ -217,12 +230,14 @@
     // 5) Handler für Chain-/Account-Wechsel
     // -----------------------------------------------------------
     function handleChainChanged(hexChainId) {
+      console.log("chainChanged:", hexChainId);
       chainId = parseInt(hexChainId, 16);
       updateUI();
       fetchStakingData();
     }
 
     function handleAccountsChanged(newAccounts) {
+      console.log("accountsChanged:", newAccounts);
       account = newAccounts[0];
       updateUI();
       fetchStakingData();
@@ -232,7 +247,10 @@
     // 6) Staking-Daten abrufen
     // -----------------------------------------------------------
     async function fetchStakingData() {
-      if (!chainId || !stakingContracts[chainId]) return;
+      if (!chainId || !stakingContracts[chainId]) {
+        console.log("Keine gültige Staking-Adresse für Chain", chainId);
+        return;
+      }
 
       const contractAddress = stakingContracts[chainId];
       const stakingABI = [
@@ -284,8 +302,8 @@
       document.getElementById("chainId").innerText = chainId || "-";
       document.getElementById("stakingContract").innerText = stakingContracts[chainId] || "Nicht unterstützt";
 
-      // Disconnect-Button nur anzeigen, wenn ein Account verbunden ist
       const disconnectBtn = document.getElementById("disconnectButton");
+      // Disconnect-Button nur anzeigen, wenn ein Account verbunden ist
       disconnectBtn.style.display = account ? "inline-block" : "none";
     }
 
