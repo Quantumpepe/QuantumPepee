@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QuantumPepe Staking</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3modal/1.9.5/web3modal.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@2.2.6/dist/browser/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.5/dist/index.min.js"></script>
+
     <style>
         body {
             background-color: #004d00;
@@ -80,27 +81,41 @@
         }
 
         async function connectWalletConnect() {
-            try {
-                const provider = new WalletConnectProvider({
+    try {
+        const providerOptions = {
+            walletconnect: {
+                package: WalletConnectProvider.default,
+                options: {
+                    projectId: "67c4292e272ac36fdbc049335adf6b67",  // Deine WalletConnect Project ID
                     rpc: {
-                        1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",
-                        56: "https://bsc-dataseed.binance.org/",
-                        137: "https://polygon-rpc.com/"
-                    },
-                    projectId: "67c4292e272ac36fdbc049335adf6b67",
-                    qrcode: true
-                });
-                await provider.enable();
-                web3 = new Web3(provider);
-                account = (await web3.eth.getAccounts())[0];
-                chainId = await web3.eth.getChainId();
-                updateUI();
-                fetchStakingData();
-            } catch (error) {
-                console.error("WalletConnect Fehler", error);
-                alert("Fehler beim Verbinden mit WalletConnect. Bitte überprüfe deine Wallet und versuche es erneut.");
+                        1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Ethereum Infura
+                        137: "https://polygon-rpc.com/",  // Polygon
+                        56: "https://bsc-dataseed.binance.org/"  // Binance Smart Chain
+                    }
+                }
             }
-        }
+        };
+
+        const web3Modal = new Web3Modal.default({
+            cacheProvider: false,
+            providerOptions
+        });
+
+        const instance = await web3Modal.connect();
+        web3 = new Web3(instance);
+
+        const accounts = await web3.eth.getAccounts();
+        const chainId = await web3.eth.getChainId();
+
+        document.getElementById("walletAddress").innerText = accounts[0];
+        document.getElementById("chainId").innerText = chainId;
+
+    } catch (error) {
+        console.error("WalletConnect Fehler:", error);
+        alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
+    }
+}
+
 
         async function fetchStakingData() {
             if (!stakingContracts[chainId]) return;
