@@ -124,20 +124,20 @@
     async function connectWalletConnect() {
       console.log("connectWalletConnect() aufgerufen...");
 
-      // 1) Prüfe: Läuft schon ein Verbindungsversuch?
+      // 1) Läuft schon ein Verbindungsversuch?
       if (wcConnectInProgress) {
         console.log("Connect request already pending. -> Abbruch");
         return;
       }
 
-      // 2) Prüfe: Ist schon verbunden?
-      if (ethereumProvider && ethereumProvider.connector && ethereumProvider.connector.connected) {
-        console.log("Bereits verbunden. Keine erneute Anfrage nötig. -> Abbruch");
+      // 2) Ist schon verbunden?
+      if (ethereumProvider?.connector?.connected) {
+        console.log("Bereits verbunden. -> Abbruch");
         return;
       }
 
       // 3) Falls Provider existiert, aber NICHT verbunden -> killSession
-      if (ethereumProvider && ethereumProvider.connector && !ethereumProvider.connector.connected) {
+      if (ethereumProvider?.connector && !ethereumProvider.connector.connected) {
         console.log("Versuche, hängende Session zu killen...");
         try {
           await ethereumProvider.connector.killSession();
@@ -147,7 +147,7 @@
         }
       }
 
-      // Jetzt wirklich den Connect starten
+      // 4) Connect-Vorgang starten
       wcConnectInProgress = true;
       console.log("Starte WalletConnect-Verbindungsversuch...");
 
@@ -196,6 +196,7 @@
         // Events
         ethereumProvider.on("chainChanged", handleChainChanged);
         ethereumProvider.on("accountsChanged", handleAccountsChanged);
+
       } catch (error) {
         console.error("WalletConnect Fehler:", error);
         alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
