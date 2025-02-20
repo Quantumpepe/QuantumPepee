@@ -155,8 +155,14 @@
       console.log("Starte WalletConnect-Verbindungsversuch...");
 
       try {
-        // Provider initialisieren
-        ethereumProvider = await window.WalletConnectEthereumProvider.EthereumProvider.init({
+        // Verwende alternativ den Provider aus "default" falls nötig:
+        const Provider = window.WalletConnectEthereumProvider?.EthereumProvider || window.WalletConnectEthereumProvider?.default;
+        if (!Provider) {
+          console.error("WalletConnectEthereumProvider nicht gefunden. Bitte überprüfe, ob das Script korrekt geladen wurde.");
+          wcConnectInProgress = false;
+          return;
+        }
+        ethereumProvider = await Provider.init({
           projectId,
           chains,
           rpcMap,
@@ -189,18 +195,18 @@
         // Web3.js anlegen
         web3 = new Web3(ethereumProvider);
 
-        // Accounts & Chain
+        // Accounts & Chain abfragen
         const accounts = await web3.eth.getAccounts();
         account = accounts[0];
         chainId = await web3.eth.getChainId();
 
         console.log("Verbindung erfolgreich:", { account, chainId });
 
-        // UI & Daten
+        // UI & Daten aktualisieren
         updateUI();
         fetchStakingData();
 
-        // Events
+        // Events abonnieren
         ethereumProvider.on("chainChanged", handleChainChanged);
         ethereumProvider.on("accountsChanged", handleAccountsChanged);
 
