@@ -118,6 +118,20 @@
       }
     }
 
+   if (ethereumProvider && ethereumProvider.connector) {
+  if (ethereumProvider.connector.connected) {
+    console.log("Bereits verbunden, daher kein neuer Connect-Versuch.");
+    return;
+  } else {
+    try {
+      await ethereumProvider.connector.killSession();
+      console.log("Hängende Session wurde beendet.");
+    } catch (e) {
+      console.error("Fehler beim Beenden der hängenden Session:", e);
+    }
+  }
+}
+
     // ----------------------------------------------------------------
     // 3) WalletConnect V2 verbinden (QR-Code -> Mobile Wallet)
     // ----------------------------------------------------------------
