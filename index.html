@@ -1,88 +1,71 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuantumPepe Staking</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.5/web3.min.js"></script>
+    <title>WalletConnect Staking</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3modal/1.9.5/web3modal.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.6.6/dist/umd/index.min.js"></script>
 </head>
 <body>
-    <h1>QuantumPepe Staking</h1>
-    
-    <button onclick="connectWallet()">💳 MetaMask verbinden</button>
-    <button onclick="connectWalletConnect()">🔗 WalletConnect verbinden</button>
-    <br><br>
-    
-    <input type="number" id="stakeAmount" placeholder="Menge eingeben">
-    <button onclick="stakeTokens(document.getElementById('stakeAmount').value)">📥 Stake</button>
-    <br><br>
-    
-    <button onclick="viewRewards(userAddress)">👀 Rewards ansehen</button>
-    <button onclick="claimRewards()">💰 Claim Rewards</button>
-    <button onclick="unstake()">🔓 Unstake</button>
-    
-    <script>
-        let provider;
-        let signer;
-        let userAddress;
-        const contractAddress = "YOUR_CONTRACT_ADDRESS"; 
-        const abi = "YOUR_CONTRACT_ABI";
+    <h2>WalletConnect & MetaMask Staking</h2>
+    <button id="connectButton">Mit Wallet verbinden</button>
+    <p><strong>Wallet:</strong> <span id="walletAddress">Nicht verbunden</span></p>
+    <p><strong>Chain:</strong> <span id="chainId">-</span></p>
+    <p><strong>Staking Contract:</strong> <span id="stakingContract">-</span></p>
+    <p><strong>Gestakte Tokens:</strong> <span id="stakedAmount">0</span></p>
+    <p><strong>Gesamtes Staking:</strong> <span id="totalStaked">0</span></p>
+    <p><strong>Rewards:</strong> <span id="rewards">0</span></p><script>
+    const stakingContracts = {
+        1: "ETHEREUM_CONTRACT_ADDRESS",
+        56: "BSC_CONTRACT_ADDRESS",
+        137: "POLYGON_CONTRACT_ADDRESS"
+    };
 
-        async function connectWallet() {
-            if (window.ethereum) {
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                signer = provider.getSigner();
-                userAddress = await signer.getAddress();
-                console.log("MetaMask verbunden:", userAddress);
-            } else {
-                alert("Bitte MetaMask installieren!");
-            }
-        }
+    let web3;
+    let account;
+    let chainId;
 
-        async function connectWalletConnect() {
-            const walletConnectProvider = new WalletConnectProvider({
-                rpc: {
-                    56: "https://bsc-dataseed.binance.org/"
-                }
-            });
-            await walletConnectProvider.enable();
-            provider = new ethers.providers.Web3Provider(walletConnectProvider);
-            signer = provider.getSigner();
-            userAddress = await signer.getAddress();
-            console.log("WalletConnect verbunden:", userAddress);
+    async function connectWallet() {
+        if (window.ethereum) {
+            web3 = new Web3(window.ethereum);
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            account = (await web3.eth.getAccounts())[0];
+            chainId = await web3.eth.getChainId();
+            updateUI();
+            fetchStakingData();
+        } else {
+            alert("MetaMask nicht gefunden!");
         }
+    }
 
-        async function stakeTokens(amount) {
-            const contract = new ethers.Contract(contractAddress, abi, signer);
-            const amountWei = ethers.utils.parseUnits(amount.toString(), 18);
-            const tx = await contract.stakeTokens(amountWei);
-            await tx.wait();
-            console.log("Tokens gestaked:", amount);
-        }
+    async function fetchStakingData() {
+        if (!stakingContracts[chainId]) return;
+        const contractAddress = stakingContracts[chainId];
+        const stakingABI = [
+            { "constant": true, "inputs": [{ "name": "", "type": "address" }], "name": "stakedBalance", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
+            { "constant": true, "inputs": [], "name": "totalStaked", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
+            { "constant": true, "inputs": [{ "name": "", "type": "address" }], "name": "pendingRewards", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" }
+        ];
+        const contract = new web3.eth.Contract(stakingABI, contractAddress);
+        const userStaked = await contract.methods.stakedBalance(account).call();
+        const totalStakedAmount = await contract.methods.totalStaked().call();
+        const pendingRewards = await contract.methods.pendingRewards(account).call();
+        
+        document.getElementById("stakedAmount").innerText = web3.utils.fromWei(userStaked, "ether");
+        document.getElementById("totalStaked").innerText = web3.utils.fromWei(totalStakedAmount, "ether");
+        document.getElementById("rewards").innerText = web3.utils.fromWei(pendingRewards, "ether");
+    }
 
-        async function viewRewards() {
-            const contract = new ethers.Contract(contractAddress, abi, provider);
-            const rewardsWei = await contract.viewReward(userAddress);
-            const rewards = ethers.utils.formatUnits(rewardsWei, 18);
-            console.log("Rewards:", rewards);
-        }
+    function updateUI() {
+        document.getElementById("walletAddress").innerText = account;
+        document.getElementById("chainId").innerText = chainId;
+        document.getElementById("stakingContract").innerText = stakingContracts[chainId] || "Nicht unterstützt";
+    }
 
-        async function claimRewards() {
-            const contract = new ethers.Contract(contractAddress, abi, signer);
-            const tx = await contract.claimRewards();
-            await tx.wait();
-            console.log("Rewards erfolgreich geclaimt!");
-        }
+    document.getElementById("connectButton").addEventListener("click", connectWallet);
+</script>
 
-        async function unstake() {
-            const contract = new ethers.Contract(contractAddress, abi, signer);
-            const tx = await contract.unstake();
-            await tx.wait();
-            console.log("Tokens und Rewards erfolgreich unstaked!");
-        }
-    </script>
 </body>
 </html>
+         
