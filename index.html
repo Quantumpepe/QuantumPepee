@@ -130,14 +130,17 @@
         return;
       }
 
-      // 2) Ist schon verbunden?
-      if (ethereumProvider?.connector?.connected) {
+      // 2) Prüfe, ob ethereumProvider existiert
+      console.log("Aktueller ethereumProvider:", ethereumProvider);
+
+      // 3) Prüfe, ob wir schon verbunden sind
+      if (ethereumProvider && ethereumProvider.connector && ethereumProvider.connector.connected) {
         console.log("Bereits verbunden. -> Abbruch");
         return;
       }
 
-      // 3) Falls Provider existiert, aber NICHT verbunden -> killSession
-      if (ethereumProvider?.connector && !ethereumProvider.connector.connected) {
+      // 4) Falls Provider existiert, aber NICHT verbunden -> killSession
+      if (ethereumProvider && ethereumProvider.connector && !ethereumProvider.connector.connected) {
         console.log("Versuche, hängende Session zu killen...");
         try {
           await ethereumProvider.connector.killSession();
@@ -147,7 +150,7 @@
         }
       }
 
-      // 4) Connect-Vorgang starten
+      // 5) Connect-Vorgang starten
       wcConnectInProgress = true;
       console.log("Starte WalletConnect-Verbindungsversuch...");
 
@@ -167,6 +170,8 @@
           events: ["chainChanged", "accountsChanged"],
           showQrModal: false
         });
+
+        console.log("Neuer ethereumProvider erstellt:", ethereumProvider);
 
         // Modal erstellen und öffnen
         const wcModal = new window.WalletConnectModal.WalletConnectModal({
@@ -188,6 +193,8 @@
         const accounts = await web3.eth.getAccounts();
         account = accounts[0];
         chainId = await web3.eth.getChainId();
+
+        console.log("Verbindung erfolgreich:", { account, chainId });
 
         // UI & Daten
         updateUI();
@@ -317,3 +324,4 @@
   </script>
 </body>
 </html>
+
