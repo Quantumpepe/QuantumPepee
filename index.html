@@ -83,18 +83,19 @@
         async function connectWalletConnect() {
     try {
         const providerOptions = {
-            walletconnect: {
-                package: WalletConnectProvider.default,
-                options: {
-                    projectId: "67c4292e272ac36fdbc049335adf6b67",  // Deine WalletConnect Project ID
-                    rpc: {
-                        1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Ethereum Infura
-                        137: "https://polygon-rpc.com/",  // Polygon
-                        56: "https://bsc-dataseed.binance.org/"  // Binance Smart Chain
-                    }
-                }
+    walletconnect: {
+        package: WalletConnectProvider.default,
+        options: {
+            projectId: "67c4292e272ac36fdbc049335adf6b67",  // Deine WalletConnect Project ID
+            rpc: {
+                1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Ethereum Infura
+                137: "https://polygon-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Polygon Infura
+                56: "https://bsc-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83"  // Binance Smart Chain Infura
             }
-        };
+        }
+    }
+};
+
 
         const web3Modal = new Web3Modal.default({
             cacheProvider: false,
