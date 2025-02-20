@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,78 +50,79 @@
         <p><strong>Gestakte Tokens:</strong> <span id="stakedAmount">0</span></p>
         <p><strong>Gesamtes Staking:</strong> <span id="totalStaked">0</span></p>
         <p><strong>Rewards:</strong> <span id="rewards">0</span></p>
-    </div><script>
-    const stakingContracts = {
-        1: "ETHEREUM_CONTRACT_ADDRESS",
-        56: "BSC_CONTRACT_ADDRESS",
-        137: "POLYGON_CONTRACT_ADDRESS"
-    };
+    </div>
+    
+    <script>
+        const stakingContracts = {
+            1: "ETHEREUM_CONTRACT_ADDRESS",
+            56: "BSC_CONTRACT_ADDRESS",
+            137: "POLYGON_CONTRACT_ADDRESS"
+        };
 
-    let web3;
-    let account;
-    let chainId;
+        let web3;
+        let account;
+        let chainId;
 
-    async function connectMetaMask() {
-        if (window.ethereum) {
-            web3 = new Web3(window.ethereum);
-            await window.ethereum.request({ method: "eth_requestAccounts" });
-            account = (await web3.eth.getAccounts())[0];
-            chainId = await web3.eth.getChainId();
-            updateUI();
-            fetchStakingData();
-        } else {
-            alert("MetaMask nicht gefunden!");
+        async function connectMetaMask() {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                await window.ethereum.request({ method: "eth_requestAccounts" });
+                account = (await web3.eth.getAccounts())[0];
+                chainId = await web3.eth.getChainId();
+                updateUI();
+                fetchStakingData();
+            } else {
+                alert("MetaMask nicht gefunden!");
+            }
         }
-    }
 
-    async function connectWalletConnect() {
-        try {
-            const provider = new WalletConnectProvider({
-                rpc: {
-                    1: "https://mainnet.infura.io/v3/YOUR_INFURA_KEY",
-                    56: "https://bsc-dataseed.binance.org/",
-                    137: "https://polygon-rpc.com/"
-                },
-                qrcode: true
-            });
-            await provider.enable();
-            web3 = new Web3(provider);
-            account = (await web3.eth.getAccounts())[0];
-            chainId = await web3.eth.getChainId();
-            updateUI();
-            fetchStakingData();
-        } catch (error) {
-            console.error("WalletConnect Fehler", error);
+        async function connectWalletConnect() {
+            try {
+                const provider = new WalletConnectProvider({
+                    rpc: {
+                        1: "https://mainnet.infura.io/v3/YOUR_INFURA_KEY",
+                        56: "https://bsc-dataseed.binance.org/",
+                        137: "https://polygon-rpc.com/"
+                    },
+                    qrcode: true
+                });
+                await provider.enable();
+                web3 = new Web3(provider);
+                account = (await web3.eth.getAccounts())[0];
+                chainId = await web3.eth.getChainId();
+                updateUI();
+                fetchStakingData();
+            } catch (error) {
+                console.error("WalletConnect Fehler", error);
+            }
         }
-    }
 
-    async function fetchStakingData() {
-        if (!stakingContracts[chainId]) return;
-        const contractAddress = stakingContracts[chainId];
-        const stakingABI = [
-            { "constant": true, "inputs": [{ "name": "", "type": "address" }], "name": "stakedBalance", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
-            { "constant": true, "inputs": [], "name": "totalStaked", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
-            { "constant": true, "inputs": [{ "name": "", "type": "address" }], "name": "pendingRewards", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" }
-        ];
-        const contract = new web3.eth.Contract(stakingABI, contractAddress);
-        const userStaked = await contract.methods.stakedBalance(account).call();
-        const totalStakedAmount = await contract.methods.totalStaked().call();
-        const pendingRewards = await contract.methods.pendingRewards(account).call();
-        
-        document.getElementById("stakedAmount").innerText = web3.utils.fromWei(userStaked, "ether");
-        document.getElementById("totalStaked").innerText = web3.utils.fromWei(totalStakedAmount, "ether");
-        document.getElementById("rewards").innerText = web3.utils.fromWei(pendingRewards, "ether");
-    }
+        async function fetchStakingData() {
+            if (!stakingContracts[chainId]) return;
+            const contractAddress = stakingContracts[chainId];
+            const stakingABI = [
+                { "constant": true, "inputs": [{ "name": "", "type": "address" }], "name": "stakedBalance", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
+                { "constant": true, "inputs": [], "name": "totalStaked", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
+                { "constant": true, "inputs": [{ "name": "", "type": "address" }], "name": "pendingRewards", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" }
+            ];
+            const contract = new web3.eth.Contract(stakingABI, contractAddress);
+            const userStaked = await contract.methods.stakedBalance(account).call();
+            const totalStakedAmount = await contract.methods.totalStaked().call();
+            const pendingRewards = await contract.methods.pendingRewards(account).call();
+            
+            document.getElementById("stakedAmount").innerText = web3.utils.fromWei(userStaked, "ether");
+            document.getElementById("totalStaked").innerText = web3.utils.fromWei(totalStakedAmount, "ether");
+            document.getElementById("rewards").innerText = web3.utils.fromWei(pendingRewards, "ether");
+        }
 
-    function updateUI() {
-        document.getElementById("walletAddress").innerText = account;
-        document.getElementById("chainId").innerText = chainId;
-        document.getElementById("stakingContract").innerText = stakingContracts[chainId] || "Nicht unterstützt";
-    }
+        function updateUI() {
+            document.getElementById("walletAddress").innerText = account;
+            document.getElementById("chainId").innerText = chainId;
+            document.getElementById("stakingContract").innerText = stakingContracts[chainId] || "Nicht unterstützt";
+        }
 
-    document.getElementById("connectMetaMask").addEventListener("click", connectMetaMask);
-    document.getElementById("connectWalletConnect").addEventListener("click", connectWalletConnect);
-</script>
-
+        document.getElementById("connectMetaMask").addEventListener("click", connectMetaMask);
+        document.getElementById("connectWalletConnect").addEventListener("click", connectWalletConnect);
+    </script>
 </body>
 </html>
