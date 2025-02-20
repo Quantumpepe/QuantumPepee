@@ -53,6 +53,19 @@
     .container p, .container h2, .container strong {
       color: #00ff00;
     }
+    .pepe-container {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px; /* Größe anpassen */
+    height: auto;
+}
+
+.pepe-container img {
+    width: 100%;
+    height: auto;
+}
   </style>
 </head>
 <body>
@@ -329,6 +342,9 @@
     document.getElementById("connectWalletConnect").addEventListener("click", connectWalletConnect);
     document.getElementById("disconnectButton").addEventListener("click", disconnect);
   </script>
+  <div class="pepe-container">
+    <img src="quantumpepe.png" alt="QuantumPepe">
+</div>
 </body>
 </html>
 
