@@ -1,153 +1,199 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuantumPepe Staking</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuantumPepe Staking</title>
 
-    <!-- Web3 & WalletConnect V2 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/web3modal@2.3.0/dist/index.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@2.2.6/dist/umd/index.min.js"></script>
+  <!-- Web3 -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
 
-    <style>
-        body {
-            background-color: #004d00;
-            color: #00ff00;
-            font-family: 'Orbitron', sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-        button {
-            background-color: #00ff00;
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 10px;
-            border-radius: 10px;
-        }
-        button:hover {
-            background-color: #00cc00;
-        }
-        .container {
-            max-width: 500px;
-            margin: auto;
-            padding: 20px;
-            border: 2px solid #00ff00;
-            border-radius: 15px;
-            box-shadow: 0px 0px 10px #00ff00;
-            background-color: rgba(0, 0, 0, 0.9);
-        }
-        .container p, .container h2, .container strong {
-            color: #00ff00;
-        }
-    </style>
+  <!-- WalletConnect V1 -->
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+  
+  <!-- Web3Modal V1 -->
+  <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.12/dist/index.js"></script>
+
+  <style>
+    body {
+      background-color: #004d00;
+      color: #00ff00;
+      font-family: 'Orbitron', sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    button {
+      background-color: #00ff00;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+    button:hover {
+      background-color: #00cc00;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      border: 2px solid #00ff00;
+      border-radius: 15px;
+      box-shadow: 0px 0px 10px #00ff00;
+      background-color: rgba(0, 0, 0, 0.9);
+    }
+    .container p,
+    .container h2,
+    .container strong {
+      color: #00ff00;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>QuantumPepe Staking</h2>
-        <button id="connectMetaMask">Mit MetaMask verbinden</button>
-        <button id="connectWalletConnect">Mit WalletConnect verbinden</button>
-        <p><strong>Wallet:</strong> <span id="walletAddress">Nicht verbunden</span></p>
-        <p><strong>Chain:</strong> <span id="chainId">-</span></p>
-        <p><strong>Staking Contract:</strong> <span id="stakingContract">-</span></p>
-        <p><strong>Gestakte Tokens:</strong> <span id="stakedAmount">0</span></p>
-        <p><strong>Gesamtes Staking:</strong> <span id="totalStaked">0</span></p>
-        <p><strong>Rewards:</strong> <span id="rewards">0</span></p>
-    </div>
+  <div class="container">
+    <h2>QuantumPepe Staking</h2>
+    <button id="connectMetaMask">Mit MetaMask verbinden</button>
+    <button id="connectWalletConnect">Mit WalletConnect verbinden</button>
+    <p><strong>Wallet:</strong> <span id="walletAddress">Nicht verbunden</span></p>
+    <p><strong>Chain:</strong> <span id="chainId">-</span></p>
+    <p><strong>Staking Contract:</strong> <span id="stakingContract">-</span></p>
+    <p><strong>Gestakte Tokens:</strong> <span id="stakedAmount">0</span></p>
+    <p><strong>Gesamtes Staking:</strong> <span id="totalStaked">0</span></p>
+    <p><strong>Rewards:</strong> <span id="rewards">0</span></p>
+  </div>
 
-    <script>
-        const stakingContracts = {
-            1: "ETHEREUM_CONTRACT_ADDRESS",
-            56: "BSC_CONTRACT_ADDRESS",
-            137: "POLYGON_CONTRACT_ADDRESS"
+  <script>
+    // --- Hier die jeweiligen Staking-Contract-Adressen eintragen ---
+    const stakingContracts = {
+      1: "ETHEREUM_CONTRACT_ADDRESS",
+      56: "BSC_CONTRACT_ADDRESS",
+      137: "POLYGON_CONTRACT_ADDRESS"
+    };
+
+    let web3;
+    let account;
+    let chainId;
+
+    // MetaMask-Verbindung
+    async function connectMetaMask() {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        account = (await web3.eth.getAccounts())[0];
+        chainId = await web3.eth.getChainId();
+        updateUI();
+        fetchStakingData();
+      } else {
+        alert("MetaMask nicht gefunden!");
+      }
+    }
+
+    // WalletConnect-Verbindung
+    async function connectWalletConnect() {
+      try {
+        // WalletConnect (V1) Provider-Optionen
+        const providerOptions = {
+          walletconnect: {
+            package: WalletConnectProvider,
+            options: {
+              infuraId: "e501cafbd38147b5aa9e6bc20b35ec83",
+              rpc: {
+                1:   "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",
+                137: "https://polygon-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",
+                // BSC nicht via Infura, also offizieller Seed-Node:
+                56:  "https://bsc-dataseed.binance.org"
+              }
+            }
+          }
         };
 
-        let web3;
-        let account;
-        let chainId;
+        // Web3Modal (V1) Instanz
+        const web3Modal = new window.Web3Modal({
+          cacheProvider: false,
+          providerOptions
+        });
 
-        async function connectMetaMask() {
-            if (window.ethereum) {
-                web3 = new Web3(window.ethereum);
-                await window.ethereum.request({ method: "eth_requestAccounts" });
-                account = (await web3.eth.getAccounts())[0];
-                chainId = await web3.eth.getChainId();
-                updateUI();
-                fetchStakingData();
-            } else {
-                alert("MetaMask nicht gefunden!");
-            }
+        // Nutzer wählt Wallet im Dialog
+        const provider = await web3Modal.connect();
+
+        // Web3-Instanz erzeugen
+        web3 = new Web3(provider);
+
+        // Accounts & ChainId abrufen
+        const accounts = await web3.eth.getAccounts();
+        chainId = await web3.eth.getChainId();
+        account = accounts[0];
+
+        updateUI();
+        fetchStakingData();
+      } catch (error) {
+        console.error("WalletConnect Fehler:", error);
+        alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
+      }
+    }
+
+    // Staking-Daten abrufen
+    async function fetchStakingData() {
+      if (!stakingContracts[chainId]) return;
+
+      const contractAddress = stakingContracts[chainId];
+      const stakingABI = [
+        {
+          "constant": true,
+          "inputs": [{ "name": "", "type": "address" }],
+          "name": "stakedBalance",
+          "outputs": [{ "name": "", "type": "uint256" }],
+          "type": "function"
+        },
+        {
+          "constant": true,
+          "inputs": [],
+          "name": "totalStaked",
+          "outputs": [{ "name": "", "type": "uint256" }],
+          "type": "function"
+        },
+        {
+          "constant": true,
+          "inputs": [{ "name": "", "type": "address" }],
+          "name": "pendingRewards",
+          "outputs": [{ "name": "", "type": "uint256" }],
+          "type": "function"
         }
+      ];
 
-        async function connectWalletConnect() {
-            try {
-                const providerOptions = {
-                    walletconnect: {
-                        package: WalletConnectProvider,  // Korrekte Referenz
-                        options: {
-                            projectId: "67c4292e272ac36fdbc049335adf6b67",  // WalletConnect V2 Project ID
-                            rpc: {
-                                1: "https://mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Ethereum Infura
-                                137: "https://polygon-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83",  // Polygon Infura
-                                56: "https://bsc-mainnet.infura.io/v3/e501cafbd38147b5aa9e6bc20b35ec83"  // Binance Smart Chain Infura
-                            }
-                        }
-                    }
-                };
+      const contract = new web3.eth.Contract(stakingABI, contractAddress);
+      const userStaked = await contract.methods.stakedBalance(account).call();
+      const totalStakedAmount = await contract.methods.totalStaked().call();
+      const pendingRewards = await contract.methods.pendingRewards(account).call();
 
-                const web3Modal = new Web3Modal({
-                    cacheProvider: false,
-                    providerOptions
-                });
+      // In Ether umrechnen und in UI schreiben
+      document.getElementById("stakedAmount").innerText =
+        web3.utils.fromWei(userStaked, "ether");
+      document.getElementById("totalStaked").innerText =
+        web3.utils.fromWei(totalStakedAmount, "ether");
+      document.getElementById("rewards").innerText =
+        web3.utils.fromWei(pendingRewards, "ether");
+    }
 
-                const provider = await web3Modal.connect();
-                web3 = new Web3(provider);
+    // UI aktualisieren
+    function updateUI() {
+      document.getElementById("walletAddress").innerText = account;
+      document.getElementById("chainId").innerText = chainId;
+      document.getElementById("stakingContract").innerText =
+        stakingContracts[chainId] || "Nicht unterstützt";
+    }
 
-                const accounts = await web3.eth.getAccounts();
-                chainId = await web3.eth.getChainId();
-                account = accounts[0];
-
-                document.getElementById("walletAddress").innerText = account;
-                document.getElementById("chainId").innerText = chainId;
-                
-                fetchStakingData(); // Staking-Daten nach erfolgreichem Login abrufen
-
-            } catch (error) {
-                console.error("WalletConnect Fehler:", error);
-                alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
-            }
-        }
-
-        async function fetchStakingData() {
-            if (!stakingContracts[chainId]) return;
-            const contractAddress = stakingContracts[chainId];
-            const stakingABI = [
-                { "constant": true, "inputs": [{ "name": "", "type": "address" }], "name": "stakedBalance", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
-                { "constant": true, "inputs": [], "name": "totalStaked", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
-                { "constant": true, "inputs": [{ "name": "", "type": "address" }], "name": "pendingRewards", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" }
-            ];
-            const contract = new web3.eth.Contract(stakingABI, contractAddress);
-            const userStaked = await contract.methods.stakedBalance(account).call();
-            const totalStakedAmount = await contract.methods.totalStaked().call();
-            const pendingRewards = await contract.methods.pendingRewards(account).call();
-            
-            document.getElementById("stakedAmount").innerText = web3.utils.fromWei(userStaked, "ether");
-            document.getElementById("totalStaked").innerText = web3.utils.fromWei(totalStakedAmount, "ether");
-            document.getElementById("rewards").innerText = web3.utils.fromWei(pendingRewards, "ether");
-        }
-
-        function updateUI() {
-            document.getElementById("walletAddress").innerText = account;
-            document.getElementById("chainId").innerText = chainId;
-            document.getElementById("stakingContract").innerText = stakingContracts[chainId] || "Nicht unterstützt";
-        }
-
-        document.getElementById("connectMetaMask").addEventListener("click", connectMetaMask);
-        document.getElementById("connectWalletConnect").addEventListener("click", connectWalletConnect);
-    </script>
+    // Event Listener
+    document
+      .getElementById("connectMetaMask")
+      .addEventListener("click", connectMetaMask);
+    document
+      .getElementById("connectWalletConnect")
+      .addEventListener("click", connectWalletConnect);
+  </script>
 </body>
 </html>
+
 
