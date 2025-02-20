@@ -66,23 +66,20 @@
     // ----------------------------------------------------------------
     // 1) Konfiguration: projectId, Infura & RPC
     // ----------------------------------------------------------------
-    // Dein eigener projectId aus dem WalletConnect-Dashboard:
-    const projectId = "67c4292e272ac36fdbc049335adf6b67"; 
+    const projectId = "67c4292e272ac36fdbc049335adf6b67"; // Dein WalletConnect V2 projectId
+    const infuraId  = "e501cafbd38147b5aa9e6bc20b35ec83"; // Deine Infura-ID (falls nötig)
 
-    // Falls du Infura für Ethereum/Polygon nutzt (oder austauschen):
-    const infuraId = "e501cafbd38147b5aa9e6bc20b35ec83"; 
-
-    // Unterstützte Chain-IDs (Ethereum=1, BSC=56, Polygon=137, ...)
+    // Unterstützte Chain-IDs (z.B. Ethereum=1, BSC=56, Polygon=137)
     const chains = [1, 56, 137];
 
-    // Passende RPC-URLs (Infura unterstützt kein BSC -> binance.org)
+    // RPC-URLs (Infura unterstützt kein BSC -> binance.org)
     const rpcMap = {
       1:   `https://mainnet.infura.io/v3/${infuraId}`,
       137: `https://polygon-mainnet.infura.io/v3/${infuraId}`,
       56:  "https://bsc-dataseed.binance.org"
     };
 
-    // Staking-Contract-Adressen pro Chain
+    // Staking-Contracts
     const stakingContracts = {
       1:   "ETHEREUM_CONTRACT_ADDRESS",
       56:  "BSC_CONTRACT_ADDRESS",
@@ -94,6 +91,9 @@
     let account;
     let chainId;
     let ethereumProvider;
+
+    // Flag, um Mehrfach-Connect zu verhindern
+    let wcConnectInProgress = false;
 
     // ----------------------------------------------------------------
     // 2) MetaMask (Browser) verbinden
@@ -117,8 +117,20 @@
     // 3) WalletConnect V2 verbinden (QR-Code -> Mobile Wallet)
     // ----------------------------------------------------------------
     async function connectWalletConnect() {
+      // Prüfen, ob wir schon verbunden sind:
+      if (ethereumProvider && ethereumProvider.connector && ethereumProvider.connector.connected) {
+        console.log("Schon verbunden. Keine erneute Anfrage nötig.");
+        return;
+      }
+      // Prüfen, ob bereits ein Verbindungsversuch läuft:
+      if (wcConnectInProgress) {
+        console.log("Connect request already pending.");
+        return;
+      }
+      wcConnectInProgress = true;
+
       try {
-        // a) Provider-Instanz mit WalletConnect V2 erstellen
+        // a) Provider-Instanz erstellen
         ethereumProvider = await window.WalletConnectEthereumProvider.EthereumProvider.init({
           projectId,
           chains,
@@ -140,17 +152,17 @@
           themeMode: 'dark'
         });
 
-        // c) Aktuelle URI holen und dem Modal übergeben (zeigt QR-Code an)
+        // c) URI holen -> Modal (QR-Code) öffnen
         const uri = await ethereumProvider.connector.getUri();
         wcModal.openModal({ uri });
 
-        // d) Auf connect warten (Nutzer scannt QR, bestätigt in Wallet)
+        // d) Auf connect warten (User scannt QR, bestätigt)
         await ethereumProvider.connect();
 
         // e) Modal schließen
         wcModal.closeModal();
 
-        // f) Web3.js-Instanz erstellen
+        // f) Web3.js-Instanz
         web3 = new Web3(ethereumProvider);
 
         // g) Accounts & Chain abfragen
@@ -162,24 +174,27 @@
         updateUI();
         fetchStakingData();
 
-        // i) Reagiere auf spätere Chain-/Account-Änderungen
+        // i) Auf spätere Chain-/Account-Änderungen reagieren
         ethereumProvider.on("chainChanged", handleChainChanged);
         ethereumProvider.on("accountsChanged", handleAccountsChanged);
 
       } catch (error) {
         console.error("WalletConnect Fehler:", error);
         alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
+      } finally {
+        // Am Ende (erfolgreich oder Fehler) -> Flag zurücksetzen
+        wcConnectInProgress = false;
       }
     }
 
-    // Bei Chain-Wechsel neu abfragen
+    // Wenn Chain gewechselt wird
     function handleChainChanged(hexChainId) {
       chainId = parseInt(hexChainId, 16); // hex -> int
       updateUI();
       fetchStakingData();
     }
 
-    // Bei Account-Wechsel neu abfragen
+    // Wenn Account gewechselt wird
     function handleAccountsChanged(newAccounts) {
       account = newAccounts[0];
       updateUI();
@@ -187,7 +202,7 @@
     }
 
     // ----------------------------------------------------------------
-    // 4) Staking-Daten vom Contract abrufen
+    // 4) Staking-Daten abrufen
     // ----------------------------------------------------------------
     async function fetchStakingData() {
       if (!chainId || !stakingContracts[chainId]) return;
@@ -219,7 +234,6 @@
 
       try {
         const contract = new web3.eth.Contract(stakingABI, contractAddress);
-
         const userStaked = await contract.methods.stakedBalance(account).call();
         const totalStakedAmount = await contract.methods.totalStaked().call();
         const pendingRewards = await contract.methods.pendingRewards(account).call();
@@ -258,6 +272,7 @@
   </script>
 </body>
 </html>
+
 
 
 
