@@ -1,32 +1,362 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-<title>Meine Webseite</title>
-<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-<script>
-  let web3;
-  let provider;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuantumPepe Staking</title>
 
-  async function connectWalletConnect() {
-    provider = new WalletConnectProvider.default({
-      rpc: {
-        // Hier kannst du weitere Netzwerke hinzufügen, falls benötigt
-      },
-      chainId: 1, // Optional: Die Chain-ID des Netzwerks, mit dem du dich verbinden möchtest
-      projectId: "<67c4292e272ac36fdbc049335adf6b67>", // Ersetze durch deine WalletConnect-Projekt-ID
-    });
-    web3 = new Web3(provider);
-    try {
-      await provider.enable();
-      console.log('Mit WalletConnect verbunden');
-    } catch (error) {
-      console.error('Fehler bei der Verbindung mit WalletConnect:', error);
+  <!-- Web3.js -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
+
+  <!-- WalletConnect Ethereum Provider (V2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.6.0/dist/umd/index.min.js"></script>
+
+
+  <!-- WalletConnect Modal UI (V2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/modal-ui@2.1.2/dist/umd/index.min.js"></script>
+
+  <style>
+    .pepe-container {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px; /* Größe anpassen */
+    height: auto;
+}
+
+.pepe-container img {
+    width: 100%;
+    height: auto;
+}
+    body {
+      background-color: #004d00;
+      color: #00ff00;
+      font-family: 'Orbitron', sans-serif;
+      text-align: center;
+      padding: 20px;
     }
-  }
-</script>
+    button {
+      background-color: #00ff00;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+    button:hover {
+      background-color: #00cc00;
+    }
+    /* Disconnect-Button soll rot sein */
+    #disconnectButton {
+      background-color: red;
+      color: white;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      border: 2px solid #00ff00;
+      border-radius: 15px;
+      box-shadow: 0px 0px 10px #00ff00;
+      background-color: rgba(0, 0, 0, 0.9);
+    }
+    .container p, .container h2, .container strong {
+      color: #00ff00;
+    }
+    .pepe-container {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px; /* Größe anpassen */
+    height: auto;
+}
+
+.pepe-container img {
+    width: 100%;
+    height: auto;
+}
+  </style>
 </head>
 <body>
-  <button onclick="connectWalletConnect()">Mit WalletConnect verbinden</button>
+  <div class="container">
+    <h2>QuantumPepe Staking</h2>
+    <button id="connectMetaMask">Mit MetaMask verbinden</button>
+    <button id="connectWalletConnect">Mit WalletConnect verbinden</button>
+    <button id="disconnectButton" style="display:none;">Disconnect</button>
+    <p><strong>Wallet:</strong> <span id="walletAddress">Nicht verbunden</span></p>
+    <p><strong>Chain:</strong> <span id="chainId">-</span></p>
+    <p><strong>Staking Contract:</strong> <span id="stakingContract">-</span></p>
+    <p><strong>Gestakte Tokens:</strong> <span id="stakedAmount">0</span></p>
+    <p><strong>Gesamtes Staking:</strong> <span id="totalStaked">0</span></p>
+    <p><strong>Rewards:</strong> <span id="rewards">0</span></p>
+  </div>
+
+  <script>
+    // -----------------------------------------------------------
+    // 1) Konfiguration: projectId, Infura & RPC
+    // -----------------------------------------------------------
+    const projectId = "67c4292e272ac36fdbc049335adf6b67"; // Dein WalletConnect V2 projectId
+    const infuraId  = "e501cafbd38147b5aa9e6bc20b35ec83"; // Deine Infura-ID
+
+    // Unterstützte Chain-IDs (Ethereum=1, BSC=56, Polygon=137)
+    const chains = [1, 56, 137];
+
+    // RPC-URLs (Infura unterstützt kein BSC -> binance.org)
+    const rpcMap = {
+      1:   `https://mainnet.infura.io/v3/${infuraId}`,
+      137: `https://polygon-mainnet.infura.io/v3/${infuraId}`,
+      56:  "https://bsc-dataseed.binance.org"
+    };
+
+    // Staking-Contracts (Platzhalter durch echte Adressen ersetzen)
+    const stakingContracts = {
+      1:   "ETHEREUM_CONTRACT_ADDRESS",
+      56:  "BSC_CONTRACT_ADDRESS",
+      137: "POLYGON_CONTRACT_ADDRESS"
+    };
+
+    // -----------------------------------------------------------
+    // Globale Variablen
+    // -----------------------------------------------------------
+    let web3;
+    let account;
+    let chainId;
+    let ethereumProvider;
+    let wcConnectInProgress = false;
+
+    // -----------------------------------------------------------
+    // 2) MetaMask (Browser) verbinden
+    // -----------------------------------------------------------
+    async function connectMetaMask() {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const accounts = await web3.eth.getAccounts();
+        account = accounts[0];
+        chainId = await web3.eth.getChainId();
+        updateUI();
+        fetchStakingData();
+      } else {
+        alert("MetaMask nicht gefunden!");
+      }
+    }
+
+    // -----------------------------------------------------------
+    // 3) WalletConnect V2 verbinden (QR-Code -> Mobile Wallet)
+    // -----------------------------------------------------------
+    async function connectWalletConnect() {
+      console.log("connectWalletConnect() aufgerufen...");
+
+      // 1) Läuft schon ein Verbindungsversuch?
+      if (wcConnectInProgress) {
+        console.log("Connect request already pending. -> Abbruch");
+        return;
+      }
+
+      // 2) Prüfe, ob ethereumProvider existiert
+      console.log("Aktueller ethereumProvider:", ethereumProvider);
+
+      // 3) Prüfe, ob wir schon verbunden sind
+      if (ethereumProvider && ethereumProvider.connector && ethereumProvider.connector.connected) {
+        console.log("Bereits verbunden. -> Abbruch");
+        return;
+      }
+
+      // 4) Falls Provider existiert, aber NICHT verbunden -> killSession
+      if (ethereumProvider && ethereumProvider.connector && !ethereumProvider.connector.connected) {
+        console.log("Versuche, hängende Session zu killen...");
+        try {
+          await ethereumProvider.connector.killSession();
+          console.log("Hängende Session beendet.");
+        } catch (e) {
+          console.error("Fehler beim Killen der hängenden Session:", e);
+        }
+      }
+
+      // 5) Connect-Vorgang starten
+      wcConnectInProgress = true;
+      console.log("Starte WalletConnect-Verbindungsversuch...");
+
+      try {
+        // Verwende alternativ den Provider aus "default" falls nötig:
+        const Provider = window.WalletConnectEthereumProvider?.EthereumProvider || window.WalletConnectEthereumProvider?.default;
+        if (!Provider) {
+          console.error("WalletConnectEthereumProvider nicht gefunden. Bitte überprüfe, ob das Script korrekt geladen wurde.");
+          wcConnectInProgress = false;
+          return;
+        }
+        ethereumProvider = await Provider.init({
+          projectId,
+          chains,
+          rpcMap,
+          methods: [
+            "eth_sendTransaction",
+            "eth_signTransaction",
+            "eth_sign",
+            "personal_sign",
+            "eth_signTypedData"
+          ],
+          events: ["chainChanged", "accountsChanged"],
+          showQrModal: false
+        });
+
+        console.log("Neuer ethereumProvider erstellt:", ethereumProvider);
+
+        // Modal erstellen und öffnen
+        const wcModal = new window.WalletConnectModal.WalletConnectModal({
+          projectId,
+          themeMode: 'dark'
+        });
+
+        const uri = await ethereumProvider.connector.getUri();
+        console.log("URI erhalten:", uri);
+
+        wcModal.openModal({ uri });
+        await ethereumProvider.connect(); // User scannt QR und bestätigt
+        wcModal.closeModal();
+
+        // Web3.js anlegen
+        web3 = new Web3(ethereumProvider);
+
+        // Accounts & Chain abfragen
+        const accounts = await web3.eth.getAccounts();
+        account = accounts[0];
+        chainId = await web3.eth.getChainId();
+
+        console.log("Verbindung erfolgreich:", { account, chainId });
+
+        // UI & Daten aktualisieren
+        updateUI();
+        fetchStakingData();
+
+        // Events abonnieren
+        ethereumProvider.on("chainChanged", handleChainChanged);
+        ethereumProvider.on("accountsChanged", handleAccountsChanged);
+
+      } catch (error) {
+        console.error("WalletConnect Fehler:", error);
+        alert("Fehler beim Verbinden mit WalletConnect. Bitte erneut versuchen.");
+      } finally {
+        wcConnectInProgress = false;
+        console.log("Verbindungsversuch beendet.");
+      }
+    }
+
+    // -----------------------------------------------------------
+    // 4) Disconnect-Funktion für WalletConnect & MetaMask
+    // -----------------------------------------------------------
+    async function disconnect() {
+      console.log("disconnect() aufgerufen...");
+      if (ethereumProvider && typeof ethereumProvider.disconnect === 'function') {
+        try {
+          await ethereumProvider.disconnect();
+          console.log("WalletConnect getrennt.");
+        } catch (err) {
+          console.error("Fehler beim Disconnect:", err);
+        }
+      }
+      // MetaMask: Kein offizielles Disconnect -> interne Variablen resetten
+      web3 = null;
+      account = null;
+      chainId = null;
+      ethereumProvider = null;
+      updateUI();
+    }
+
+    // -----------------------------------------------------------
+    // 5) Handler für Chain-/Account-Wechsel
+    // -----------------------------------------------------------
+    function handleChainChanged(hexChainId) {
+      console.log("chainChanged:", hexChainId);
+      chainId = parseInt(hexChainId, 16);
+      updateUI();
+      fetchStakingData();
+    }
+
+    function handleAccountsChanged(newAccounts) {
+      console.log("accountsChanged:", newAccounts);
+      account = newAccounts[0];
+      updateUI();
+      fetchStakingData();
+    }
+
+    // -----------------------------------------------------------
+    // 6) Staking-Daten abrufen
+    // -----------------------------------------------------------
+    async function fetchStakingData() {
+      if (!chainId || !stakingContracts[chainId]) {
+        console.log("Keine gültige Staking-Adresse für Chain", chainId);
+        return;
+      }
+
+      const contractAddress = stakingContracts[chainId];
+      const stakingABI = [
+        {
+          "constant": true,
+          "inputs": [{ "name": "", "type": "address" }],
+          "name": "stakedBalance",
+          "outputs": [{ "name": "", "type": "uint256" }],
+          "type": "function"
+        },
+        {
+          "constant": true,
+          "inputs": [],
+          "name": "totalStaked",
+          "outputs": [{ "name": "", "type": "uint256" }],
+          "type": "function"
+        },
+        {
+          "constant": true,
+          "inputs": [{ "name": "", "type": "address" }],
+          "name": "pendingRewards",
+          "outputs": [{ "name": "", "type": "uint256" }],
+          "type": "function"
+        }
+      ];
+
+      try {
+        const contract = new web3.eth.Contract(stakingABI, contractAddress);
+        const userStaked = await contract.methods.stakedBalance(account).call();
+        const totalStakedAmount = await contract.methods.totalStaked().call();
+        const pendingRewards = await contract.methods.pendingRewards(account).call();
+
+        document.getElementById("stakedAmount").innerText =
+          web3.utils.fromWei(userStaked, "ether");
+        document.getElementById("totalStaked").innerText =
+          web3.utils.fromWei(totalStakedAmount, "ether");
+        document.getElementById("rewards").innerText =
+          web3.utils.fromWei(pendingRewards, "ether");
+      } catch (err) {
+        console.error("Fehler beim Lesen der Staking-Daten:", err);
+      }
+    }
+
+    // -----------------------------------------------------------
+    // 7) UI aktualisieren (Verbindungsstatus, Button-Anzeige)
+    // -----------------------------------------------------------
+    function updateUI() {
+      document.getElementById("walletAddress").innerText = account || "Nicht verbunden";
+      document.getElementById("chainId").innerText = chainId || "-";
+      document.getElementById("stakingContract").innerText = stakingContracts[chainId] || "Nicht unterstützt";
+
+      const disconnectBtn = document.getElementById("disconnectButton");
+      // Disconnect-Button nur anzeigen, wenn ein Account verbunden ist
+      disconnectBtn.style.display = account ? "inline-block" : "none";
+    }
+
+    // -----------------------------------------------------------
+    // 8) Button-Events
+    // -----------------------------------------------------------
+    document.getElementById("connectMetaMask").addEventListener("click", connectMetaMask);
+    document.getElementById("connectWalletConnect").addEventListener("click", connectWalletConnect);
+    document.getElementById("disconnectButton").addEventListener("click", disconnect);
+  </script>
+  <div class="pepe-container">
+    <img src="Stak-Pepe.png" alt="QuantumPepe">
+</div>
 </body>
 </html>
