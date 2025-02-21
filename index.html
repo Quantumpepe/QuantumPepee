@@ -8,7 +8,7 @@
   <!-- Web3.js -->
   <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
 
-  <!-- WalletConnect Universal Provider -->
+  <!-- WalletConnect Universal Provider (über unpkg) -->
   <script src="https://unpkg.com/@walletconnect/universal-provider/dist/index.umd.js"></script>
 
   <!-- WalletConnect Modal UI -->
@@ -61,9 +61,8 @@
   </div>
 
   <script>
-    // Konfiguration
-    const projectId = "67c4292e272ac36fdbc049335adf6b67"; // WalletConnect Projekt ID
-    const infuraId  = "e501cafbd38147b5aa9e6bc20b35ec83"; // Infura ID
+    const projectId = "67c4292e272ac36fdbc049335adf6b67";
+    const infuraId  = "e501cafbd38147b5aa9e6bc20b35ec83";
 
     let web3;
     let account;
@@ -86,9 +85,15 @@
     async function connectWalletConnect() {
       console.log("connectWalletConnect() aufgerufen...");
 
+      // **NEU: Versuche, UniversalProvider über import() zu laden**
       if (typeof window.WalletConnectUniversalProvider === "undefined") {
-        console.error("WalletConnect UniversalProvider nicht gefunden. Lade das Script nach...");
-        return;
+        try {
+          await import("https://unpkg.com/@walletconnect/universal-provider/dist/index.umd.js");
+          console.log("WalletConnect UniversalProvider erfolgreich nachgeladen.");
+        } catch (err) {
+          console.error("Fehler beim Nachladen des UniversalProviders:", err);
+          return;
+        }
       }
 
       try {
@@ -158,5 +163,4 @@
 
 </body>
 </html>
-
 
