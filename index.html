@@ -9,7 +9,7 @@
   <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
 
   <!-- WalletConnect Universal Provider -->
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/universal-provider@2.6.0/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/@walletconnect/universal-provider/dist/index.umd.js"></script>
 
   <!-- WalletConnect Modal UI -->
   <script src="https://cdn.jsdelivr.net/npm/@walletconnect/modal-ui@2.1.2/dist/umd/index.min.js"></script>
@@ -35,7 +35,6 @@
     button:hover {
       background-color: #00cc00;
     }
-    /* Disconnect-Button soll rot sein */
     #disconnectButton {
       background-color: red;
       color: white;
@@ -49,21 +48,6 @@
       box-shadow: 0px 0px 10px #00ff00;
       background-color: rgba(0, 0, 0, 0.9);
     }
-    .container p, .container h2, .container strong {
-      color: #00ff00;
-    }
-    .pepe-container {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 200px;
-      height: auto;
-    }
-    .pepe-container img {
-      width: 100%;
-      height: auto;
-    }
   </style>
 </head>
 <body>
@@ -74,31 +58,18 @@
     <button id="disconnectButton" style="display:none;">Disconnect</button>
     <p><strong>Wallet:</strong> <span id="walletAddress">Nicht verbunden</span></p>
     <p><strong>Chain:</strong> <span id="chainId">-</span></p>
-    <p><strong>Staking Contract:</strong> <span id="stakingContract">-</span></p>
-    <p><strong>Gestakte Tokens:</strong> <span id="stakedAmount">0</span></p>
-    <p><strong>Gesamtes Staking:</strong> <span id="totalStaked">0</span></p>
-    <p><strong>Rewards:</strong> <span id="rewards">0</span></p>
   </div>
 
   <script>
-    // WalletConnect Konfiguration
-    const projectId = "67c4292e272ac36fdbc049335adf6b67"; // Dein WalletConnect V2 projectId
-    const infuraId  = "e501cafbd38147b5aa9e6bc20b35ec83"; // Deine Infura-ID
-
-    const chains = [1, 56, 137];
-
-    const rpcMap = {
-      1:   `https://mainnet.infura.io/v3/${infuraId}`,
-      137: `https://polygon-mainnet.infura.io/v3/${infuraId}`,
-      56:  "https://bsc-dataseed.binance.org"
-    };
+    // Konfiguration
+    const projectId = "67c4292e272ac36fdbc049335adf6b67"; // WalletConnect Projekt ID
+    const infuraId  = "e501cafbd38147b5aa9e6bc20b35ec83"; // Infura ID
 
     let web3;
     let account;
     let chainId;
     let provider;
 
-    // MetaMask verbinden
     async function connectMetaMask() {
       if (window.ethereum) {
         web3 = new Web3(window.ethereum);
@@ -112,12 +83,11 @@
       }
     }
 
-    // WalletConnect verbinden
     async function connectWalletConnect() {
       console.log("connectWalletConnect() aufgerufen...");
 
       if (typeof window.WalletConnectUniversalProvider === "undefined") {
-        console.error("WalletConnect UniversalProvider nicht gefunden.");
+        console.error("WalletConnect UniversalProvider nicht gefunden. Lade das Script nach...");
         return;
       }
 
@@ -139,8 +109,7 @@
             eip155: {
               methods: ["eth_sendTransaction", "eth_signTransaction", "eth_sign", "personal_sign", "eth_signTypedData"],
               chains: ["eip155:1", "eip155:137", "eip155:56"],
-              events: ["chainChanged", "accountsChanged"],
-              rpcMap: rpcMap
+              events: ["chainChanged", "accountsChanged"]
             }
           }
         });
@@ -159,7 +128,6 @@
       }
     }
 
-    // Disconnect Funktion
     async function disconnect() {
       console.log("disconnect() aufgerufen...");
       if (provider) {
@@ -188,9 +156,6 @@
     document.getElementById("disconnectButton").addEventListener("click", disconnect);
   </script>
 
-  <div class="pepe-container">
-    <img src="Stak-Pepe.png" alt="QuantumPepe">
-  </div>
 </body>
 </html>
 
