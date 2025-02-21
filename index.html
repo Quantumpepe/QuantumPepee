@@ -8,9 +8,6 @@
   <!-- Web3.js -->
   <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
 
-  <!-- WalletConnect Universal Provider (über unpkg) -->
-  <script src="https://unpkg.com/@walletconnect/universal-provider/dist/index.umd.js"></script>
-
   <!-- WalletConnect Modal UI -->
   <script src="https://cdn.jsdelivr.net/npm/@walletconnect/modal-ui@2.1.2/dist/umd/index.min.js"></script>
 
@@ -60,7 +57,9 @@
     <p><strong>Chain:</strong> <span id="chainId">-</span></p>
   </div>
 
-  <script>
+  <script type="module">
+    import UniversalProvider from "https://cdn.jsdelivr.net/npm/@walletconnect/universal-provider/dist/index.umd.js";
+
     const projectId = "67c4292e272ac36fdbc049335adf6b67";
     const infuraId  = "e501cafbd38147b5aa9e6bc20b35ec83";
 
@@ -85,19 +84,8 @@
     async function connectWalletConnect() {
       console.log("connectWalletConnect() aufgerufen...");
 
-      // **NEU: Versuche, UniversalProvider über import() zu laden**
-      if (typeof window.WalletConnectUniversalProvider === "undefined") {
-        try {
-          await import("https://unpkg.com/@walletconnect/universal-provider/dist/index.umd.js");
-          console.log("WalletConnect UniversalProvider erfolgreich nachgeladen.");
-        } catch (err) {
-          console.error("Fehler beim Nachladen des UniversalProviders:", err);
-          return;
-        }
-      }
-
       try {
-        provider = await window.WalletConnectUniversalProvider.init({
+        provider = await UniversalProvider.init({
           projectId: projectId,
           metadata: {
             name: "QuantumPepe Staking",
@@ -163,4 +151,5 @@
 
 </body>
 </html>
+
 
