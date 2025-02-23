@@ -51,7 +51,6 @@
       font-size: 16px;
       margin-top: 10px;
       border-radius: 10px;
-      cursor: pointer;
     }
     .qrcode-container {
       margin-top: 20px;
@@ -107,7 +106,10 @@
       <button id="stakeButton">Stake Tokens</button>
     </div>
     <div class="flex-row">
-      <button id="unstakeButton">Unstake alles</button>
+      <button id="unstakeButton">Unstake</button>
+    </div>
+    <div class="flex-row">
+      <button id="claimButton">Rewards Claimen</button>
     </div>
     
     <!-- QR-Code für MetaMask Mobile -->
@@ -127,35 +129,42 @@
     let chainId;
     let contract; // Smart Contract-Objekt
 
-    // --- Hier eintragen: Deine Smart Contract Adresse und dein ABI ---
-    const CONTRACT_ADDRESS = "0xDEINE_VERTRAGSADRESSE"; // Ersetze diesen Platzhalter
+    // --- Bitte hier eintragen: Deine Smart Contract Adresse und dein ABI ---
+    const CONTRACT_ADDRESS = "0xDEINE_VERTRAGSADRESSE"; // z. B. 0x1234567890abcdef...
     const CONTRACT_ABI = [
-      // Ersetze dieses Array mit deinem tatsächlichen ABI
-      // Beispiel:
+      // Füge hier dein komplettes ABI als Array ein
       {
         "constant": true,
         "inputs": [{ "name": "account", "type": "address" }],
-        "name": "stakedBalance",
+        "name": "stakedAmounts",
         "outputs": [{ "name": "", "type": "uint256" }],
         "type": "function"
       },
       {
         "constant": false,
         "inputs": [{ "name": "amount", "type": "uint256" }],
-        "name": "stake",
+        "name": "stakeTokens",
         "outputs": [],
         "type": "function"
       },
       {
         "constant": false,
         "inputs": [],
-        "name": "unstakeAll",
+        "name": "unstake",
+        "outputs": [],
+        "type": "function"
+      },
+      {
+        "constant": false,
+        "inputs": [],
+        "name": "claimRewards",
         "outputs": [],
         "type": "function"
       }
+      // ... weitere Funktionen deines Vertrags falls benötigt
     ];
     
-    // Verbindung zu MetaMask herstellen
+    // Verbindung zu MetaMask herstellen und Smart Contract initialisieren
     async function connectMetaMask() {
       if (window.ethereum) {
         web3 = new Web3(window.ethereum);
@@ -167,9 +176,7 @@
           updateUI();
           // Smart Contract initialisieren
           contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-          // Im UI die Vertragsadresse anzeigen
           document.getElementById("stakingContract").innerText = CONTRACT_ADDRESS;
-          // Aktualisiere den gestakten Betrag
           updateStakedBalance();
         } catch (error) {
           console.error("Fehler beim Verbinden:", error);
@@ -219,14 +226,14 @@
     async function updateStakedBalance() {
       if (!contract || !account) return;
       try {
-        const balance = await contract.methods.stakedBalance(account).call();
+        const balance = await contract.methods.stakedAmounts(account).call();
         document.getElementById("stakedAmount").innerText = balance;
       } catch (error) {
-        console.error("Fehler beim Abrufen des Staking-Balance:", error);
+        console.error("Fehler beim Abrufen des gestakten Betrags:", error);
       }
     }
     
-    // Stake-Funktion: Aufruf der "stake"-Funktion im Contract
+    // Stake-Funktion: Aufruf der "stakeTokens"-Funktion im Contract
     async function stakeTokens() {
       if (!contract || !account) {
         alert("Bitte zuerst mit MetaMask verbinden!");
@@ -238,7 +245,7 @@
         return;
       }
       try {
-        await contract.methods.stake(amount).send({ from: account });
+        await contract.methods.stakeTokens(amount).send({ from: account });
         alert("Stake erfolgreich!");
         updateStakedBalance();
       } catch (error) {
@@ -247,14 +254,14 @@
       }
     }
     
-    // Unstake-Funktion: Aufruf der "unstakeAll"-Funktion im Contract
-    async function unstakeAll() {
+    // Unstake-Funktion: Aufruf der "unstake"-Funktion im Contract
+    async function unstake() {
       if (!contract || !account) {
         alert("Bitte zuerst mit MetaMask verbinden!");
         return;
       }
       try {
-        await contract.methods.unstakeAll().send({ from: account });
+        await contract.methods.unstake().send({ from: account });
         alert("Unstake erfolgreich!");
         updateStakedBalance();
       } catch (error) {
@@ -263,11 +270,28 @@
       }
     }
     
+    // Claim Rewards: Aufruf der "claimRewards"-Funktion im Contract
+    async function claimRewards() {
+      if (!contract || !account) {
+        alert("Bitte zuerst mit MetaMask verbinden!");
+        return;
+      }
+      try {
+        await contract.methods.claimRewards().send({ from: account });
+        alert("Rewards erfolgreich claimt!");
+        updateStakedBalance();
+      } catch (error) {
+        console.error("Fehler beim Claim:", error);
+        alert("Claim fehlgeschlagen: " + error.message);
+      }
+    }
+    
     // Event-Listener für Buttons
     document.getElementById("connectMetaMask").addEventListener("click", connectMetaMask);
     document.getElementById("switchChain").addEventListener("click", switchChain);
     document.getElementById("stakeButton").addEventListener("click", stakeTokens);
-    document.getElementById("unstakeButton").addEventListener("click", unstakeAll);
+    document.getElementById("unstakeButton").addEventListener("click", unstake);
+    document.getElementById("claimButton").addEventListener("click", claimRewards);
     
     // QR-Code generieren (zeigt die aktuelle URL, z.B. für MetaMask Mobile)
     window.onload = function() {
@@ -283,5 +307,3 @@
   </script>
 </body>
 </html>
-
-
